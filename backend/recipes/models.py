@@ -21,7 +21,7 @@ class Ingredient(models.Model):
     class Meta:
         verbose_name = 'Ингредиент'
         verbose_name_plural = 'Ингредиенты'
-        ordering = ('id',)
+        ordering = ('pk',)
 
     def __str__(self):
         return self.name
@@ -46,7 +46,7 @@ class Tag(models.Model):
     class Meta:
         verbose_name = 'Тег'
         verbose_name_plural = 'Теги'
-        ordering = ('id',)
+        ordering = ('pk',)
 
     def __str__(self):
         return self.name
@@ -112,6 +112,7 @@ class IngredientRecipe(models.Model):
     ingredient = models.ForeignKey(
         Ingredient,
         on_delete=models.CASCADE,
+        related_name='recipe_ingredients',
         verbose_name='Ингредиент',
     )
     recipe = models.ForeignKey(
