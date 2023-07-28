@@ -4,10 +4,12 @@ from rest_framework.decorators import action
 from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet
 
-from users.models import User
+from users.models import User, Subscribe
 from recipes.models import Tag, Ingredient, Recipe
 from .serializers import (
     CustomUserSerializer,
+    SubscribeSerializer,
+    SubscribeInfoSerializer,
     TagSerializer,
     RecipeSerializer
 )
@@ -15,6 +17,33 @@ from .serializers import (
 
 class CustomUserViewSet(UserViewSet):
     queryset = User.objects.all()
+    serializer_class = CustomUserSerializer
+    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
+
+    @action(
+        detail=True,
+        methods=['POST', 'DELETE'],
+        url_path='subscribe',
+        url_name='subscribe',
+        permission_classes=(permissions.IsAuthenticated,),
+    )
+    def subscribe(self, request, **kwargs):
+        author = get_object_or_404(User, pk=self.kwargs.get('id'))
+        serializer = SubscribeSerializer(
+            data={'user': request.user.pk, 'author': author.pk}
+        )
+        if request.method == 'POST':
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            serializer = SubscribeInfoSerializer(
+                author,
+                context={'request': request}
+            )
+            return Response(
+                serializer.data, status=status.HTTP_201_CREATED
+            )
+        Subscribe.objects.filter(user=request.user, author=author).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class TagViewSet(viewsets.ModelViewSet):

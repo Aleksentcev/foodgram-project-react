@@ -1,7 +1,9 @@
 from rest_framework import serializers
+from rest_framework.validators import UniqueTogetherValidator
+from django.shortcuts import get_object_or_404
 from djoser.serializers import UserCreateSerializer, UserSerializer
 
-from users.models import User
+from users.models import User, Subscribe
 from recipes.models import Tag, Ingredient, Recipe, IngredientRecipe
 
 
@@ -9,6 +11,7 @@ class CustomUserCreateSerializer(UserCreateSerializer):
     class Meta:
         fields = (
             'username',
+            'pk',
             'password',
             'email',
             'first_name',
@@ -18,6 +21,8 @@ class CustomUserCreateSerializer(UserCreateSerializer):
 
 
 class CustomUserSerializer(UserSerializer):
+    is_subscribed = serializers.SerializerMethodField()
+
     class Meta:
         fields = (
             'email',
@@ -25,8 +30,54 @@ class CustomUserSerializer(UserSerializer):
             'username',
             'first_name',
             'last_name',
+            'is_subscribed',
         )
         model = User
+
+    def get_is_subscribed(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return Subscribe.objects.filter(
+                user=request.user,
+                author=obj
+            ).exists()
+        return False
+
+
+class SubscribeSerializer(serializers.ModelSerializer):
+    class Meta:
+        fields = ('user', 'author')
+        model = Subscribe
+        validators = [
+            UniqueTogetherValidator(
+                queryset=Subscribe.objects.all(),
+                fields=('user', 'author')
+            )
+        ]
+
+
+class SubscribeInfoSerializer(serializers.ModelSerializer):
+    is_subscribed = serializers.SerializerMethodField()
+
+    class Meta:
+        fields = (
+            'email',
+            'pk',
+            'username',
+            'first_name',
+            'last_name',
+            'is_subscribed',
+            # 'recipes',
+            # 'recipes_count',
+        )
+        model = User
+
+    def get_is_subscribed(self, obj):
+        request = self.context.get('request')
+        return Subscribe.objects.filter(
+                user=request.user,
+                author=obj
+            ).exists()
 
 
 class TagSerializer(serializers.ModelSerializer):

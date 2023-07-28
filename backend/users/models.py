@@ -41,17 +41,17 @@ class User(AbstractUser):
         return self.username
 
 
-class Follow(models.Model):
+class Subscribe(models.Model):
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='following',
+        related_name='subscribe',
         verbose_name='Подписчик',
     )
-    following = models.ForeignKey(
+    author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='followers',
+        related_name='subscriber',
         verbose_name='Автор',
     )
 
@@ -60,12 +60,12 @@ class Follow(models.Model):
         verbose_name_plural = 'Подписки'
 
         constraints = [
-            models.UniqueConstraint(fields=['user', 'following'],
-                                    name='unique_follower'),
+            models.UniqueConstraint(fields=['user', 'author'],
+                                    name='unique_subscriber'),
         ]
 
     def clean(self):
-        if self.user == self.following:
+        if self.user == self.author:
             raise ValidationError(
                 {'title': "Нельзя подписаться на самого себя!"}
             )
