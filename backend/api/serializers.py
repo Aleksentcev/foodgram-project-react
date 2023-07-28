@@ -7,6 +7,74 @@ from users.models import User, Subscribe
 from recipes.models import Tag, Ingredient, Recipe, IngredientRecipe
 
 
+class TagSerializer(serializers.ModelSerializer):
+    class Meta:
+        fields = ('pk', 'name', 'color', 'slug')
+        model = Tag
+
+
+class IngredientSerializer(serializers.ModelSerializer):
+    class Meta:
+        fields = (
+            'pk',
+            'name',
+            'measurement_unit',
+        )
+        model = Ingredient
+
+
+class IngredientRecipeSerializer(serializers.ModelSerializer):
+    pk = serializers.ReadOnlyField(source='ingredient.pk')
+    name = serializers.ReadOnlyField(source='ingredient.name')
+    measurement_unit = serializers.ReadOnlyField(
+        source='ingredient.measurement_unit'
+    )
+
+    class Meta:
+        fields = (
+            'pk',
+            'name',
+            'measurement_unit',
+            'amount'
+        )
+        model = IngredientRecipe
+
+
+class RecipeCutSerializer(serializers.ModelSerializer):
+    class Meta:
+        fields = (
+            'pk',
+            'name',
+            'image',
+            'cooking_time',
+        )
+        model = Recipe
+
+
+class RecipeSerializer(serializers.ModelSerializer):
+    tags = TagSerializer(many=True)
+    ingredients = IngredientRecipeSerializer(
+        many=True,
+        read_only=True,
+        source='recipe_ingredients'
+    )
+
+    class Meta:
+        fields = (
+            'pk',
+            'tags',
+            'author',
+            'ingredients',
+            # 'is_favorited',
+            # 'is_in_shopping_cart',
+            'name',
+            'image',
+            'text',
+            'cooking_time',
+        )
+        model = Recipe
+
+
 class CustomUserCreateSerializer(UserCreateSerializer):
     class Meta:
         fields = (
@@ -58,6 +126,8 @@ class SubscribeSerializer(serializers.ModelSerializer):
 
 class SubscribeInfoSerializer(serializers.ModelSerializer):
     is_subscribed = serializers.SerializerMethodField()
+    recipes = RecipeCutSerializer(many=True)
+    recipes_count = serializers.SerializerMethodField()
 
     class Meta:
         fields = (
@@ -67,8 +137,8 @@ class SubscribeInfoSerializer(serializers.ModelSerializer):
             'first_name',
             'last_name',
             'is_subscribed',
-            # 'recipes',
-            # 'recipes_count',
+            'recipes',
+            'recipes_count',
         )
         model = User
 
@@ -79,49 +149,5 @@ class SubscribeInfoSerializer(serializers.ModelSerializer):
                 author=obj
         ).exists()
 
-
-class TagSerializer(serializers.ModelSerializer):
-    class Meta:
-        fields = ('pk', 'name', 'color', 'slug')
-        model = Tag
-
-
-class IngredientRecipeSerializer(serializers.ModelSerializer):
-    pk = serializers.ReadOnlyField(source='ingredient.pk')
-    name = serializers.ReadOnlyField(source='ingredient.name')
-    measurement_unit = serializers.ReadOnlyField(
-        source='ingredient.measurement_unit'
-    )
-
-    class Meta:
-        fields = (
-            'pk',
-            'name',
-            'measurement_unit',
-            'amount'
-        )
-        model = IngredientRecipe
-
-
-class RecipeSerializer(serializers.ModelSerializer):
-    tags = TagSerializer(many=True)
-    ingredients = IngredientRecipeSerializer(
-        many=True,
-        read_only=True,
-        source='recipe_ingredients'
-    )
-
-    class Meta:
-        fields = (
-            'pk',
-            'tags',
-            'author',
-            'ingredients',
-            # 'is_favorited',
-            # 'is_in_shopping_cart',
-            'name',
-            'image',
-            'text',
-            'cooking_time',
-        )
-        model = Recipe
+    def get_recipes_count(self, obj):
+        return obj.recipes.count()

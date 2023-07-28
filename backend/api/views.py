@@ -15,6 +15,24 @@ from .serializers import (
 )
 
 
+class TagViewSet(viewsets.ModelViewSet):
+    queryset = Tag.objects.all()
+    serializer_class = TagSerializer
+    permission_classes = (permissions.AllowAny,)
+
+
+class RecipeViewSet(viewsets.ModelViewSet):
+    queryset = Recipe.objects.all()
+    serializer_class = RecipeSerializer
+
+    def get_queryset(self):
+        recipes = Recipe.objects.prefetch_related(
+            'recipe_ingredients__ingredient',
+            'tags'
+        ).all()
+        return recipes
+
+
 class CustomUserViewSet(UserViewSet):
     queryset = User.objects.all()
     serializer_class = CustomUserSerializer
@@ -44,22 +62,3 @@ class CustomUserViewSet(UserViewSet):
             )
         Subscribe.objects.filter(user=request.user, author=author).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-class TagViewSet(viewsets.ModelViewSet):
-    queryset = Tag.objects.all()
-    serializer_class = TagSerializer
-    permission_classes = (permissions.AllowAny,)
-
-
-class RecipeViewSet(viewsets.ModelViewSet):
-    queryset = Recipe.objects.all()
-    serializer_class = RecipeSerializer
-
-    def get_queryset(self):
-        recipes = Recipe.objects.prefetch_related(
-            'recipe_ingredients__ingredient',
-            'tags'
-        ).all()
-        return recipes
-
