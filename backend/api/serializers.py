@@ -77,7 +77,7 @@ class SubscribeInfoSerializer(serializers.ModelSerializer):
         return Subscribe.objects.filter(
                 user=request.user,
                 author=obj
-            ).exists()
+        ).exists()
 
 
 class TagSerializer(serializers.ModelSerializer):
