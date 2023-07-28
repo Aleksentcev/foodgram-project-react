@@ -5,13 +5,15 @@ from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet
 
 from users.models import User, Subscribe
-from recipes.models import Tag, Ingredient, Recipe
+from recipes.models import Tag, Ingredient, Recipe, Favorite
 from .serializers import (
     CustomUserSerializer,
     SubscribeSerializer,
     SubscribeInfoSerializer,
     TagSerializer,
-    RecipeSerializer
+    RecipeSerializer,
+    RecipeCutSerializer,
+    FavoriteSerializer,
 )
 
 
@@ -26,11 +28,35 @@ class RecipeViewSet(viewsets.ModelViewSet):
     serializer_class = RecipeSerializer
 
     def get_queryset(self):
-        recipes = Recipe.objects.prefetch_related(
+        return Recipe.objects.prefetch_related(
             'recipe_ingredients__ingredient',
             'tags'
         ).all()
-        return recipes
+
+    @action(
+        detail=True,
+        methods=['POST', 'DELETE'],
+        url_path='favorite',
+        url_name='favorite',
+        permission_classes=(permissions.IsAuthenticated,),
+    )
+    def favorite(self, request, **kwargs):
+        recipe = get_object_or_404(Recipe, pk=self.kwargs.get('pk'))
+        serializer = FavoriteSerializer(
+            data={'user': request.user.pk, 'favorite': recipe.pk}
+        )
+        if request.method == 'POST':
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            serializer = RecipeCutSerializer(
+                recipe,
+                context={'request': request}
+            )
+            return Response(
+                serializer.data, status=status.HTTP_201_CREATED
+            )
+        Favorite.objects.filter(user=request.user, favorite=recipe).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class CustomUserViewSet(UserViewSet):

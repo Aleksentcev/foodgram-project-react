@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404
 from djoser.serializers import UserCreateSerializer, UserSerializer
 
 from users.models import User, Subscribe
-from recipes.models import Tag, Ingredient, Recipe, IngredientRecipe
+from recipes.models import Tag, Ingredient, Recipe, IngredientRecipe, Favorite
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -51,6 +51,18 @@ class RecipeCutSerializer(serializers.ModelSerializer):
         model = Recipe
 
 
+class FavoriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        fields = ('user', 'favorite')
+        model = Favorite
+        validators = [
+            UniqueTogetherValidator(
+                queryset=Favorite.objects.all(),
+                fields=('user', 'favorite')
+            )
+        ]
+
+
 class RecipeSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True)
     ingredients = IngredientRecipeSerializer(
@@ -58,6 +70,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         read_only=True,
         source='recipe_ingredients'
     )
+    is_favorited = serializers.SerializerMethodField()
 
     class Meta:
         fields = (
@@ -65,7 +78,7 @@ class RecipeSerializer(serializers.ModelSerializer):
             'tags',
             'author',
             'ingredients',
-            # 'is_favorited',
+            'is_favorited',
             # 'is_in_shopping_cart',
             'name',
             'image',
@@ -73,6 +86,15 @@ class RecipeSerializer(serializers.ModelSerializer):
             'cooking_time',
         )
         model = Recipe
+    
+    def get_is_favorited(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return Favorite.objects.filter(
+                user=request.user,
+                favorite=obj
+            ).exists()
+        return False
 
 
 class CustomUserCreateSerializer(UserCreateSerializer):
