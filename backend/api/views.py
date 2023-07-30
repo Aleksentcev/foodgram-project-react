@@ -1,4 +1,4 @@
-from rest_framework import status, viewsets, permissions
+from rest_framework import status, viewsets, permissions, pagination, filters
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.shortcuts import get_object_or_404
@@ -7,13 +7,14 @@ from djoser.views import UserViewSet
 from users.models import User, Subscribe
 from recipes.models import Tag, Ingredient, Recipe, Favorite
 from .serializers import (
-    CustomUserSerializer,
-    SubscribeSerializer,
-    SubscribeInfoSerializer,
     TagSerializer,
+    IngredientSerializer,
     RecipeSerializer,
     RecipeCutSerializer,
     FavoriteSerializer,
+    CustomUserSerializer,
+    SubscribeSerializer,
+    SubscribeInfoSerializer,
 )
 
 
@@ -21,6 +22,14 @@ class TagViewSet(viewsets.ModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     permission_classes = (permissions.AllowAny,)
+
+
+class IngredientViewSet(viewsets.ModelViewSet):
+    queryset = Ingredient.objects.all()
+    serializer_class = IngredientSerializer
+    # только админ
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('^name',)
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
@@ -63,6 +72,7 @@ class CustomUserViewSet(UserViewSet):
     queryset = User.objects.all()
     serializer_class = CustomUserSerializer
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
+    pagination_class = pagination.PageNumberPagination
 
     @action(
         detail=True,
@@ -88,3 +98,19 @@ class CustomUserViewSet(UserViewSet):
             )
         Subscribe.objects.filter(user=request.user, author=author).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(
+        detail=False,
+        methods=['GET'],
+        url_path='subscriptions',
+        url_name='subscriptions',
+        permission_classes=(permissions.IsAuthenticated,),
+    )
+    def subscriptions(self, request):
+        queryset = User.objects.filter(subscriber__user=self.request.user)
+        serializer = SubscribeInfoSerializer(
+            self.paginate_queryset(queryset),
+            context={'request': request},
+            many=True
+        )
+        return self.get_paginated_response(serializer.data)
