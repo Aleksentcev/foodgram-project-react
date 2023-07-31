@@ -1,10 +1,16 @@
 from rest_framework import serializers
-from rest_framework.validators import UniqueTogetherValidator
 from django.shortcuts import get_object_or_404
 from djoser.serializers import UserCreateSerializer, UserSerializer
 
 from users.models import User, Subscribe
-from recipes.models import Tag, Ingredient, Recipe, IngredientRecipe, Favorite
+from recipes.models import (
+    Tag,
+    Ingredient,
+    Recipe,
+    IngredientRecipe,
+    Favorite,
+    ShoppingCart,
+)
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -51,18 +57,6 @@ class RecipeCutSerializer(serializers.ModelSerializer):
         model = Recipe
 
 
-class FavoriteSerializer(serializers.ModelSerializer):
-    class Meta:
-        fields = ('user', 'favorite')
-        model = Favorite
-        validators = [
-            UniqueTogetherValidator(
-                queryset=Favorite.objects.all(),
-                fields=('user', 'favorite')
-            )
-        ]
-
-
 class RecipeSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True)
     ingredients = IngredientRecipeSerializer(
@@ -79,20 +73,29 @@ class RecipeSerializer(serializers.ModelSerializer):
             'author',
             'ingredients',
             'is_favorited',
-            # 'is_in_shopping_cart',
+            'is_in_shopping_cart',
             'name',
             'image',
             'text',
             'cooking_time',
         )
         model = Recipe
-    
+
     def get_is_favorited(self, obj):
         request = self.context.get('request')
         if request and request.user.is_authenticated:
             return Favorite.objects.filter(
                 user=request.user,
                 favorite=obj
+            ).exists()
+        return False
+
+    def get_is_in_shopping_cart(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return ShoppingCart.objects.filter(
+                user=request.user,
+                shopping_cart=obj
             ).exists()
         return False
 
@@ -135,18 +138,6 @@ class CustomUserSerializer(UserSerializer):
 
 
 class SubscribeSerializer(serializers.ModelSerializer):
-    class Meta:
-        fields = ('user', 'author')
-        model = Subscribe
-        validators = [
-            UniqueTogetherValidator(
-                queryset=Subscribe.objects.all(),
-                fields=('user', 'author')
-            )
-        ]
-
-
-class SubscribeInfoSerializer(serializers.ModelSerializer):
     is_subscribed = serializers.SerializerMethodField()
     recipes = RecipeCutSerializer(many=True)
     recipes_count = serializers.SerializerMethodField()

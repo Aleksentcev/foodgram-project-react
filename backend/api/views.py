@@ -1,20 +1,25 @@
-from rest_framework import status, viewsets, permissions, pagination, filters
+from rest_framework import (
+    status,
+    viewsets,
+    permissions,
+    filters,
+    exceptions,
+    pagination,
+)
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet
 
 from users.models import User, Subscribe
-from recipes.models import Tag, Ingredient, Recipe, Favorite
+from recipes.models import Tag, Ingredient, Recipe, Favorite, ShoppingCart
 from .serializers import (
     TagSerializer,
     IngredientSerializer,
     RecipeSerializer,
     RecipeCutSerializer,
-    FavoriteSerializer,
     CustomUserSerializer,
     SubscribeSerializer,
-    SubscribeInfoSerializer,
 )
 
 
@@ -51,20 +56,47 @@ class RecipeViewSet(viewsets.ModelViewSet):
     )
     def favorite(self, request, **kwargs):
         recipe = get_object_or_404(Recipe, pk=self.kwargs.get('pk'))
-        serializer = FavoriteSerializer(
-            data={'user': request.user.pk, 'favorite': recipe.pk}
-        )
+        favorite, created = Favorite.objects.select_related(
+            'user',
+            'favorite'
+            ).get_or_create(user=request.user, favorite=recipe)
+        if request.method == 'POST' and not created:
+            raise exceptions.ValidationError(
+                detail='Вы уже добавили рецепт в избранное!'
+            )
         if request.method == 'POST':
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
             serializer = RecipeCutSerializer(
                 recipe,
                 context={'request': request}
             )
-            return Response(
-                serializer.data, status=status.HTTP_201_CREATED
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        favorite.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(
+        detail=True,
+        methods=['POST', 'DELETE'],
+        url_path='shopping_cart',
+        url_name='shopping_cart',
+        permission_classes=(permissions.IsAuthenticated,),
+    )
+    def shopping_cart(self, request, **kwargs):
+        recipe = get_object_or_404(Recipe, pk=self.kwargs.get('pk'))
+        shopping_cart, created = ShoppingCart.objects.select_related(
+            'user',
+            'shopping_cart'
+            ).get_or_create(user=request.user, shopping_cart=recipe)
+        if request.method == 'POST' and not created:
+            raise exceptions.ValidationError(
+                detail='Вы уже добавили рецепт в список покупок!'
             )
-        Favorite.objects.filter(user=request.user, favorite=recipe).delete()
+        if request.method == 'POST':
+            serializer = RecipeCutSerializer(
+                recipe,
+                context={'request': request}
+            )
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        shopping_cart.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -83,20 +115,21 @@ class CustomUserViewSet(UserViewSet):
     )
     def subscribe(self, request, **kwargs):
         author = get_object_or_404(User, pk=self.kwargs.get('id'))
-        serializer = SubscribeSerializer(
-            data={'user': request.user.pk, 'author': author.pk}
-        )
+        subscription, created = Subscribe.objects.select_related(
+            'user',
+            'author'
+            ).get_or_create(user=request.user, author=author)
+        if request.method == 'POST' and not created:
+            raise exceptions.ValidationError(
+                detail='Вы уже подписались на данного автора!'
+            )
         if request.method == 'POST':
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            serializer = SubscribeInfoSerializer(
+            serializer = SubscribeSerializer(
                 author,
                 context={'request': request}
             )
-            return Response(
-                serializer.data, status=status.HTTP_201_CREATED
-            )
-        Subscribe.objects.filter(user=request.user, author=author).delete()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        subscription.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
@@ -108,7 +141,7 @@ class CustomUserViewSet(UserViewSet):
     )
     def subscriptions(self, request):
         queryset = User.objects.filter(subscriber__user=self.request.user)
-        serializer = SubscribeInfoSerializer(
+        serializer = SubscribeSerializer(
             self.paginate_queryset(queryset),
             context={'request': request},
             many=True
