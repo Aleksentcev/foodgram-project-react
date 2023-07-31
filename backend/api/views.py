@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet
+from django_filters.rest_framework import DjangoFilterBackend
 
 from users.models import User, Subscribe
 from recipes.models import Tag, Ingredient, Recipe, Favorite, ShoppingCart
@@ -40,12 +41,16 @@ class IngredientViewSet(viewsets.ModelViewSet):
 class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
+    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
+    pagination_class = pagination.PageNumberPagination
+    filter_backends = (DjangoFilterBackend,)
 
     def get_queryset(self):
         return Recipe.objects.prefetch_related(
             'recipe_ingredients__ingredient',
             'tags'
         ).all()
+# попробовать объединить 2 похожие функции ниже
 
     @action(
         detail=True,
@@ -55,11 +60,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=(permissions.IsAuthenticated,),
     )
     def favorite(self, request, **kwargs):
-        recipe = get_object_or_404(Recipe, pk=self.kwargs.get('pk'))
-        favorite, created = Favorite.objects.select_related(
-            'user',
-            'favorite'
-            ).get_or_create(user=request.user, favorite=recipe)
+        recipe = get_object_or_404(Recipe, id=self.kwargs.get('pk'))
+        favorite, created = Favorite.objects.get_or_create(
+            user=request.user,
+            favorite=recipe
+        )
         if request.method == 'POST' and not created:
             raise exceptions.ValidationError(
                 detail='Вы уже добавили рецепт в избранное!'
@@ -81,11 +86,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=(permissions.IsAuthenticated,),
     )
     def shopping_cart(self, request, **kwargs):
-        recipe = get_object_or_404(Recipe, pk=self.kwargs.get('pk'))
-        shopping_cart, created = ShoppingCart.objects.select_related(
-            'user',
-            'shopping_cart'
-            ).get_or_create(user=request.user, shopping_cart=recipe)
+        recipe = get_object_or_404(Recipe, id=self.kwargs.get('pk'))
+        shopping_cart, created = ShoppingCart.objects.get_or_create(
+            user=request.user,
+            shopping_cart=recipe
+        )
         if request.method == 'POST' and not created:
             raise exceptions.ValidationError(
                 detail='Вы уже добавили рецепт в список покупок!'
@@ -114,11 +119,11 @@ class CustomUserViewSet(UserViewSet):
         permission_classes=(permissions.IsAuthenticated,),
     )
     def subscribe(self, request, **kwargs):
-        author = get_object_or_404(User, pk=self.kwargs.get('id'))
-        subscription, created = Subscribe.objects.select_related(
-            'user',
-            'author'
-            ).get_or_create(user=request.user, author=author)
+        author = get_object_or_404(User, id=self.kwargs.get('id'))
+        subscription, created = Subscribe.objects.get_or_create(
+            user=request.user,
+            author=author
+        )
         if request.method == 'POST' and not created:
             raise exceptions.ValidationError(
                 detail='Вы уже подписались на данного автора!'

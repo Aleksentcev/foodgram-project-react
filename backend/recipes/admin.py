@@ -6,7 +6,7 @@ from .models import Ingredient, Tag, Recipe, IngredientRecipe
 @admin.register(Ingredient)
 class IngredientAdmin(admin.ModelAdmin):
     list_display = (
-        'pk',
+        'id',
         'name',
         'measurement_unit'
     )
@@ -21,7 +21,7 @@ class IngredientRecipeInLine(admin.TabularInline):
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
     list_display = (
-        'pk',
+        'id',
         'name',
         'color',
         'slug'
@@ -31,7 +31,7 @@ class TagAdmin(admin.ModelAdmin):
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
     list_display = (
-        'pk',
+        'id',
         'name',
         'author',
         'count_favorite'

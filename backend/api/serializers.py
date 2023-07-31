@@ -1,3 +1,7 @@
+import base64
+
+import webcolors
+from django.core.files.base import ContentFile
 from rest_framework import serializers
 from django.shortcuts import get_object_or_404
 from djoser.serializers import UserCreateSerializer, UserSerializer
@@ -13,16 +17,39 @@ from recipes.models import (
 )
 
 
+class Hex2NameColor(serializers.Field):
+    def to_representation(self, value):
+        return value
+
+    def to_internal_value(self, data):
+        try:
+            data = webcolors.hex_to_name(data)
+        except ValueError:
+            raise serializers.ValidationError('Для этого цвета нет имени')
+        return data
+
+
+class Base64ImageField(serializers.ImageField):
+    def to_internal_value(self, data):
+        if isinstance(data, str) and data.startswith('data:image'):
+            format, imgstr = data.split(';base64,')
+            ext = format.split('/')[-1]
+            data = ContentFile(base64.b64decode(imgstr), name='temp.' + ext)
+        return super().to_internal_value(data)
+
+
 class TagSerializer(serializers.ModelSerializer):
+    color = Hex2NameColor()
+
     class Meta:
-        fields = ('pk', 'name', 'color', 'slug')
+        fields = ('id', 'name', 'color', 'slug')
         model = Tag
 
 
 class IngredientSerializer(serializers.ModelSerializer):
     class Meta:
         fields = (
-            'pk',
+            'id',
             'name',
             'measurement_unit',
         )
@@ -30,7 +57,7 @@ class IngredientSerializer(serializers.ModelSerializer):
 
 
 class IngredientRecipeSerializer(serializers.ModelSerializer):
-    pk = serializers.ReadOnlyField(source='ingredient.pk')
+    id = serializers.ReadOnlyField(source='ingredient.id')
     name = serializers.ReadOnlyField(source='ingredient.name')
     measurement_unit = serializers.ReadOnlyField(
         source='ingredient.measurement_unit'
@@ -38,7 +65,7 @@ class IngredientRecipeSerializer(serializers.ModelSerializer):
 
     class Meta:
         fields = (
-            'pk',
+            'id',
             'name',
             'measurement_unit',
             'amount'
@@ -49,7 +76,7 @@ class IngredientRecipeSerializer(serializers.ModelSerializer):
 class RecipeCutSerializer(serializers.ModelSerializer):
     class Meta:
         fields = (
-            'pk',
+            'id',
             'name',
             'image',
             'cooking_time',
@@ -64,11 +91,13 @@ class RecipeSerializer(serializers.ModelSerializer):
         read_only=True,
         source='recipe_ingredients'
     )
+    image = Base64ImageField()
     is_favorited = serializers.SerializerMethodField()
+    is_in_shopping_cart = serializers.SerializerMethodField()
 
     class Meta:
         fields = (
-            'pk',
+            'id',
             'tags',
             'author',
             'ingredients',
@@ -79,7 +108,10 @@ class RecipeSerializer(serializers.ModelSerializer):
             'text',
             'cooking_time',
         )
+        read_only_fields = ('is_favorited', 'is_in_shopping_cart',)
         model = Recipe
+
+# попробовать объединить 2 похожие функции ниже
 
     def get_is_favorited(self, obj):
         request = self.context.get('request')
@@ -99,12 +131,25 @@ class RecipeSerializer(serializers.ModelSerializer):
             ).exists()
         return False
 
+    def create(self, validated_data):
+        ingredients = validated_data.pop('ingredients')
+        tags = validated_data.pop('tags')
+        recipe = Recipe.objects.create(**validated_data)
+        for ingredient in ingredients:
+            IngredientRecipe.objects.create(
+                ingredient=ingredient.get('id'),
+                recipe=recipe,
+                amount=ingredient.get('amount')
+            )
+        recipe.tags.set(tags)
+        return recipe
+
 
 class CustomUserCreateSerializer(UserCreateSerializer):
     class Meta:
         fields = (
             'username',
-            'pk',
+            'id',
             'password',
             'email',
             'first_name',
@@ -119,7 +164,7 @@ class CustomUserSerializer(UserSerializer):
     class Meta:
         fields = (
             'email',
-            'pk',
+            'id',
             'username',
             'first_name',
             'last_name',
@@ -145,7 +190,7 @@ class SubscribeSerializer(serializers.ModelSerializer):
     class Meta:
         fields = (
             'email',
-            'pk',
+            'id',
             'username',
             'first_name',
             'last_name',
