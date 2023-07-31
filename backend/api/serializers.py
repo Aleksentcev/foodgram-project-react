@@ -85,7 +85,7 @@ class RecipeCutSerializer(serializers.ModelSerializer):
 
 
 class RecipeSerializer(serializers.ModelSerializer):
-    tags = TagSerializer(many=True)
+    tags = TagSerializer(many=True, read_only=True)
     ingredients = IngredientRecipeSerializer(
         many=True,
         read_only=True,
@@ -118,7 +118,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         if request and request.user.is_authenticated:
             return Favorite.objects.filter(
                 user=request.user,
-                favorite=obj
+                recipe=obj
             ).exists()
         return False
 
@@ -127,7 +127,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         if request and request.user.is_authenticated:
             return ShoppingCart.objects.filter(
                 user=request.user,
-                shopping_cart=obj
+                recipe=obj
             ).exists()
         return False
 

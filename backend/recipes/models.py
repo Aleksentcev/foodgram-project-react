@@ -151,7 +151,7 @@ class Favorite(models.Model):
         on_delete=models.CASCADE,
         verbose_name='Пользователь',
     )
-    favorite = models.ForeignKey(
+    recipe = models.ForeignKey(
         Recipe,
         on_delete=models.CASCADE,
         verbose_name='Изб. рецепт',
@@ -163,7 +163,7 @@ class Favorite(models.Model):
         default_related_name = 'favorites'
 
         constraints = [
-            models.UniqueConstraint(fields=['user', 'favorite'],
+            models.UniqueConstraint(fields=['user', 'recipe'],
                                     name='unique_favorite'),
         ]
 
@@ -174,7 +174,7 @@ class ShoppingCart(models.Model):
         on_delete=models.CASCADE,
         verbose_name='Пользователь',
     )
-    shopping_cart = models.ForeignKey(
+    recipe = models.ForeignKey(
         Recipe,
         on_delete=models.CASCADE,
         verbose_name='Изб. рецепт',
@@ -185,6 +185,6 @@ class ShoppingCart(models.Model):
         verbose_name_plural = 'Списки покупок'
         default_related_name = 'shopping_carts'
         constraints = [
-            models.UniqueConstraint(fields=['user', 'shopping_cart'],
+            models.UniqueConstraint(fields=['user', 'recipe'],
                                     name='unique_shopping_cart'),
         ]

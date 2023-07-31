@@ -27,15 +27,15 @@ from .serializers import (
 class TagViewSet(viewsets.ModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
-    permission_classes = (permissions.AllowAny,)
+    pagination_class = None
 
 
 class IngredientViewSet(viewsets.ModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
-    # только админ
     filter_backends = (filters.SearchFilter,)
     search_fields = ('^name',)
+    pagination_class = None
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
@@ -63,7 +63,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         recipe = get_object_or_404(Recipe, id=self.kwargs.get('pk'))
         favorite, created = Favorite.objects.get_or_create(
             user=request.user,
-            favorite=recipe
+            recipe=recipe
         )
         if request.method == 'POST' and not created:
             raise exceptions.ValidationError(
@@ -89,7 +89,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         recipe = get_object_or_404(Recipe, id=self.kwargs.get('pk'))
         shopping_cart, created = ShoppingCart.objects.get_or_create(
             user=request.user,
-            shopping_cart=recipe
+            recipe=recipe
         )
         if request.method == 'POST' and not created:
             raise exceptions.ValidationError(
