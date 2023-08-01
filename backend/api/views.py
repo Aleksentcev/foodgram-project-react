@@ -2,12 +2,12 @@ from rest_framework import (
     status,
     viewsets,
     permissions,
-    filters,
     exceptions,
     pagination,
 )
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from rest_framework.permissions import SAFE_METHODS
 from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet
 from django_filters.rest_framework import DjangoFilterBackend
@@ -18,10 +18,12 @@ from .serializers import (
     TagSerializer,
     IngredientSerializer,
     RecipeSerializer,
+    RecipeCreateUpdateSerializer,
     RecipeCutSerializer,
     CustomUserSerializer,
     SubscribeSerializer,
 )
+from .filters import IngredientSearchFilter, RecipeFilter
 
 
 class TagViewSet(viewsets.ModelViewSet):
@@ -33,8 +35,8 @@ class TagViewSet(viewsets.ModelViewSet):
 class IngredientViewSet(viewsets.ModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
-    filter_backends = (filters.SearchFilter,)
-    search_fields = ('^name',)
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = IngredientSearchFilter
     pagination_class = None
 
 
@@ -44,13 +46,37 @@ class RecipeViewSet(viewsets.ModelViewSet):
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
     pagination_class = pagination.PageNumberPagination
     filter_backends = (DjangoFilterBackend,)
+    filterset_class = RecipeFilter
 
     def get_queryset(self):
         return Recipe.objects.prefetch_related(
             'recipe_ingredients__ingredient',
             'tags'
         ).all()
-# попробовать объединить 2 похожие функции ниже
+
+    def get_serializer_class(self):
+        if self.request.method in SAFE_METHODS:
+            return RecipeSerializer
+        return RecipeCreateUpdateSerializer
+
+    def add_remove_recipe(self, request, id, user, model, method):
+        recipe = get_object_or_404(Recipe, id=id)
+        obj, created = model.objects.get_or_create(
+            user=user,
+            recipe=recipe
+        )
+        if method == 'POST' and not created:
+            raise exceptions.ValidationError(
+                detail='Вы уже cовершили это действие!'
+            )
+        if method == 'POST':
+            serializer = RecipeCutSerializer(
+                recipe,
+                context={'request': request}
+            )
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        obj.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
         detail=True,
@@ -60,23 +86,13 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=(permissions.IsAuthenticated,),
     )
     def favorite(self, request, **kwargs):
-        recipe = get_object_or_404(Recipe, id=self.kwargs.get('pk'))
-        favorite, created = Favorite.objects.get_or_create(
+        return self.add_remove_recipe(
+            request=request,
+            id=self.kwargs.get('pk'),
             user=request.user,
-            recipe=recipe
+            model=Favorite,
+            method=request.method
         )
-        if request.method == 'POST' and not created:
-            raise exceptions.ValidationError(
-                detail='Вы уже добавили рецепт в избранное!'
-            )
-        if request.method == 'POST':
-            serializer = RecipeCutSerializer(
-                recipe,
-                context={'request': request}
-            )
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        favorite.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
         detail=True,
@@ -86,23 +102,13 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=(permissions.IsAuthenticated,),
     )
     def shopping_cart(self, request, **kwargs):
-        recipe = get_object_or_404(Recipe, id=self.kwargs.get('pk'))
-        shopping_cart, created = ShoppingCart.objects.get_or_create(
+        return self.add_remove_recipe(
+            request=request,
+            id=self.kwargs.get('pk'),
             user=request.user,
-            recipe=recipe
+            model=ShoppingCart,
+            method=request.method
         )
-        if request.method == 'POST' and not created:
-            raise exceptions.ValidationError(
-                detail='Вы уже добавили рецепт в список покупок!'
-            )
-        if request.method == 'POST':
-            serializer = RecipeCutSerializer(
-                recipe,
-                context={'request': request}
-            )
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        shopping_cart.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class CustomUserViewSet(UserViewSet):
