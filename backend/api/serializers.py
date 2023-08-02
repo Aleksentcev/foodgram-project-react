@@ -3,7 +3,6 @@ import base64
 import webcolors
 from django.core.files.base import ContentFile
 from rest_framework import serializers
-from django.shortcuts import get_object_or_404
 from djoser.serializers import UserCreateSerializer, UserSerializer
 
 from users.models import User, Subscribe
@@ -15,6 +14,8 @@ from recipes.models import (
     Favorite,
     ShoppingCart,
     TagRecipe,
+    MIN_COOKING_TIME,
+    MIN_ING_AMOUNT,
 )
 
 
@@ -98,6 +99,13 @@ class IngredientRecipeCreateSerializer(serializers.ModelSerializer):
         fields = ('id', 'amount',)
         model = IngredientRecipe
 
+    def validate_amount(self, value):
+        if value < MIN_ING_AMOUNT:
+            raise serializers.ValidationError(
+                'Нужно указать нормальное количество!'
+            )
+        return value
+
 
 class RecipeSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True)
@@ -149,6 +157,7 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
     author = CustomUserSerializer(read_only=True)
     ingredients = IngredientRecipeCreateSerializer(many=True)
     image = Base64ImageField(max_length=None, use_url=True)
+    cooking_time = serializers.IntegerField(write_only=True)
 
     class Meta:
         fields = (
@@ -163,18 +172,36 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
         )
         model = Recipe
 
-    def create_ingredients_recipe(self, ingredients, recipe):
-        for ingredient in ingredients:
-            IngredientRecipe.objects.create(
-                ingredient_id=ingredient.get('id'),
-                amount=ingredient.get('amount'),
-                recipe=recipe
+    def validate_cooking_time(self, value):
+        if value < MIN_COOKING_TIME:
+            raise serializers.ValidationError(
+                'Даже шеф-повар не может так быстро готовить!'
             )
+        return value
+
+    def validate_ingredients(self, ingredients):
+        unique_ings = []
+        for ingredient in ingredients:
+            ing_id = ingredient.get('id')
+            if ing_id in unique_ings:
+                raise serializers.ValidationError(
+                    'Не стоит добавлять один и тот же ингредиент много раз!'
+                )
+            unique_ings.append(ing_id)
+        return ingredients
 
     def create_tags_recipe(self, tags, recipe):
         for tag in tags:
             TagRecipe.objects.create(
                 tag_id=tag.id,
+                recipe=recipe
+            )
+
+    def create_ingredients_recipe(self, ingredients, recipe):
+        for ingredient in ingredients:
+            IngredientRecipe.objects.create(
+                ingredient_id=ingredient.get('id'),
+                amount=ingredient.get('amount'),
                 recipe=recipe
             )
 
@@ -186,6 +213,16 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
         self.create_ingredients_recipe(ingredients, recipe)
         self.create_tags_recipe(tags, recipe)
         return recipe
+
+    def update(self, instance, validated_data):
+        instance.tags.clear()
+        ingredients = validated_data.pop('ingredients')
+        tags = validated_data.pop('tags')
+        IngredientRecipe.objects.filter(recipe=instance).delete()
+        self.create_ingredients_recipe(ingredients, instance)
+        self.create_tags_recipe(tags, instance)
+        super().update(instance, validated_data)
+        return instance
 
 
 class RecipeCutSerializer(serializers.ModelSerializer):

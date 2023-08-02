@@ -4,6 +4,7 @@ from django.db import models
 from users.models import User
 
 MIN_COOKING_TIME = 1
+MIN_ING_AMOUNT = 1
 
 
 class Ingredient(models.Model):
@@ -122,6 +123,12 @@ class IngredientRecipe(models.Model):
     )
     amount = models.PositiveIntegerField(
         'Количество в рецепте',
+        validators=[
+            MinValueValidator(
+                MIN_ING_AMOUNT,
+                message='Нужно указать нормальное количество!'
+            )
+        ],
         null=False,
     )
 

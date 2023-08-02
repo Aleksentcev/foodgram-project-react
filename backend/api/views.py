@@ -1,19 +1,22 @@
-from rest_framework import (
-    status,
-    viewsets,
-    permissions,
-    exceptions,
-    pagination,
-)
+from rest_framework import status, viewsets, permissions, exceptions
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.permissions import SAFE_METHODS
 from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet
+from django.db.models import Sum
+from django.http import FileResponse
 from django_filters.rest_framework import DjangoFilterBackend
 
 from users.models import User, Subscribe
-from recipes.models import Tag, Ingredient, Recipe, Favorite, ShoppingCart
+from recipes.models import (
+    Tag,
+    Ingredient,
+    Recipe,
+    Favorite,
+    ShoppingCart,
+    IngredientRecipe,
+)
 from .serializers import (
     TagSerializer,
     IngredientSerializer,
@@ -26,13 +29,13 @@ from .serializers import (
 from .filters import IngredientSearchFilter, RecipeFilter
 
 
-class TagViewSet(viewsets.ModelViewSet):
+class TagViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     pagination_class = None
 
 
-class IngredientViewSet(viewsets.ModelViewSet):
+class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     filter_backends = (DjangoFilterBackend,)
@@ -44,14 +47,14 @@ class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
-    pagination_class = pagination.PageNumberPagination
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
 
     def get_queryset(self):
         return Recipe.objects.prefetch_related(
             'recipe_ingredients__ingredient',
-            'tags'
+            'tags',
+            'author'
         ).all()
 
     def get_serializer_class(self):
@@ -110,15 +113,54 @@ class RecipeViewSet(viewsets.ModelViewSet):
             method=request.method
         )
 
+    @action(
+        detail=False,
+        methods=['GET'],
+        url_path='download_shopping_cart',
+        url_name='download_shopping_cart',
+        permission_classes=(permissions.IsAuthenticated,),
+    )
+    def download_shopping_cart(self, request):
+        ingredients = (IngredientRecipe.objects.filter(
+            recipe__shopping_carts__user=request.user).values(
+            'ingredient__name',
+            'ingredient__measurement_unit',
+            ).annotate(amount=Sum('amount'))
+        )
+        pretty_ings = []
+        for ingredient in ingredients:
+            pretty_ings.append('{name} - {amount} {m_unit}\n'.format(
+                name=ingredient.get('ingredient__name'),
+                amount=ingredient.get('amount'),
+                m_unit=ingredient.get('ingredient__measurement_unit')
+            ))
+        response = FileResponse(pretty_ings, content_type='text/plain')
+        return response
+
+        # name = 'recipe_id__recipe_ingredients__ingredient__name'
+        # m_unit = 'recipe_id__recipe_ingredients__ingredient__measurement_unit'
+        # ingredients = self.request.user.shopping_carts.values(
+        #     name,
+        #     m_unit
+        # ).annotate(amount=Sum('recipe_id__recipe_ingredients__amount'))
+        # pretty_ings = []
+        # for ingredient in ingredients:
+        #     pretty_ings.append('{name} - {amount} {m_unit}\n'.format(
+        #         name=ingredient[name],
+        #         amount=ingredient['amount'],
+        #         m_unit=ingredient[m_unit]
+        #     ))
+        # response = FileResponse(pretty_ings, content_type='text/plain')
+        # return response
+
 
 class CustomUserViewSet(UserViewSet):
     queryset = User.objects.all()
     serializer_class = CustomUserSerializer
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
-    pagination_class = pagination.PageNumberPagination
 
     @action(
-        detail=True,
+        detail=False,
         methods=['POST', 'DELETE'],
         url_path='subscribe',
         url_name='subscribe',
