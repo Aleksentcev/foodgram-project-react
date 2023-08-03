@@ -67,7 +67,7 @@ class Subscribe(models.Model):
     def clean(self):
         if self.user == self.author:
             raise ValidationError(
-                {'title': "Нельзя подписаться на самого себя!"}
+                {'title': 'Нельзя подписаться на самого себя!'}
             )
         super().clean()
 

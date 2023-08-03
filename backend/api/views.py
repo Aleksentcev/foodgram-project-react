@@ -27,6 +27,7 @@ from .serializers import (
     SubscribeSerializer,
 )
 from .filters import IngredientSearchFilter, RecipeFilter
+from .permissions import IsAuthorOrAdminOrReadOnly
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
@@ -46,7 +47,10 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
 class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
-    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
+    permission_classes = (
+        permissions.IsAuthenticatedOrReadOnly,
+        IsAuthorOrAdminOrReadOnly
+    )
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
 
@@ -137,22 +141,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
         response = FileResponse(pretty_ings, content_type='text/plain')
         return response
 
-        # name = 'recipe_id__recipe_ingredients__ingredient__name'
-        # m_unit = 'recipe_id__recipe_ingredients__ingredient__measurement_unit'
-        # ingredients = self.request.user.shopping_carts.values(
-        #     name,
-        #     m_unit
-        # ).annotate(amount=Sum('recipe_id__recipe_ingredients__amount'))
-        # pretty_ings = []
-        # for ingredient in ingredients:
-        #     pretty_ings.append('{name} - {amount} {m_unit}\n'.format(
-        #         name=ingredient[name],
-        #         amount=ingredient['amount'],
-        #         m_unit=ingredient[m_unit]
-        #     ))
-        # response = FileResponse(pretty_ings, content_type='text/plain')
-        # return response
-
 
 class CustomUserViewSet(UserViewSet):
     queryset = User.objects.all()
@@ -160,7 +148,7 @@ class CustomUserViewSet(UserViewSet):
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
 
     @action(
-        detail=False,
+        detail=True,
         methods=['POST', 'DELETE'],
         url_path='subscribe',
         url_name='subscribe',
