@@ -123,7 +123,7 @@ class RecipeSerializer(serializers.ModelSerializer):
     def check_recipe(self, model, obj):
         request = self.context.get('request')
         return model.objects.filter(
-            user=request.user,
+            user=request.user.is_authenticated,
             recipe=obj
         ).exists()
 
@@ -269,7 +269,7 @@ class SubscribeSerializer(serializers.ModelSerializer):
     def get_is_subscribed(self, obj):
         request = self.context.get('request')
         return Subscribe.objects.filter(
-            user=request.user,
+            user=request.user.is_authenticated,
             author=obj
         ).exists()
 
