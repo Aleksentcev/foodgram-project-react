@@ -1,22 +1,25 @@
-from django.core.validators import MinValueValidator, RegexValidator
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
+from colorfield.fields import ColorField
+
 
 from users.models import User
 
 MIN_COOKING_TIME = 1
+MAX_COOKING_TIME = 10080
 MIN_ING_AMOUNT = 1
+MAX_ING_AMOUNT = 5000
+NAME_LIMIT = 15
 
 
 class Ingredient(models.Model):
     name = models.CharField(
         'Название',
         max_length=200,
-        blank=False,
     )
     measurement_unit = models.CharField(
         'Единицы измерения',
         max_length=200,
-        blank=False,
     )
 
     class Meta:
@@ -25,32 +28,34 @@ class Ingredient(models.Model):
         ordering = ('pk',)
 
     def __str__(self):
-        return self.name
+        return self.name[:NAME_LIMIT]
 
 
 class Tag(models.Model):
     name = models.CharField(
         'Название',
+        unique=True,
         max_length=200,
     )
-    color = models.CharField(
+    color = ColorField(
         'Цвет',
+        default='#FF0000',
         max_length=7,
+        unique=True,
     )
     slug = models.SlugField(
         'Уникальный слаг',
         max_length=200,
         unique=True,
-        validators=[RegexValidator(regex=r'^[-a-zA-Z0-9_]+$')]
     )
 
     class Meta:
         verbose_name = 'Тег'
         verbose_name_plural = 'Теги'
-        ordering = ('pk',)
+        ordering = ('name',)
 
     def __str__(self):
-        return self.name
+        return self.name[:NAME_LIMIT]
 
 
 class Recipe(models.Model):
@@ -63,16 +68,13 @@ class Recipe(models.Model):
     name = models.CharField(
         'Название',
         max_length=200,
-        blank=False,
     )
     image = models.ImageField(
         'Картинка',
         upload_to='recipes/images/',
-        null=False,
     )
     text = models.TextField(
         'Описание',
-        blank=False,
     )
     ingredients = models.ManyToManyField(
         Ingredient,
@@ -84,15 +86,18 @@ class Recipe(models.Model):
         through='TagRecipe',
         verbose_name='Теги',
     )
-    cooking_time = models.PositiveIntegerField(
+    cooking_time = models.PositiveSmallIntegerField(
         'Время приготовления',
         validators=[
             MinValueValidator(
                 MIN_COOKING_TIME,
                 message='Даже шеф-повар не может так быстро готовить!'
+            ),
+            MaxValueValidator(
+                MAX_COOKING_TIME,
+                message='Никто не будет готовить блюдо больше недели!'
             )
         ],
-        null=False,
     )
     pub_date = models.DateTimeField(
         'Дата публикации',
@@ -106,7 +111,7 @@ class Recipe(models.Model):
         ordering = ('-pub_date',)
 
     def __str__(self):
-        return self.name
+        return self.name[:NAME_LIMIT]
 
 
 class IngredientRecipe(models.Model):
@@ -121,15 +126,18 @@ class IngredientRecipe(models.Model):
         related_name='recipe_ingredients',
         verbose_name='Рецепт',
     )
-    amount = models.PositiveIntegerField(
+    amount = models.PositiveSmallIntegerField(
         'Количество в рецепте',
         validators=[
             MinValueValidator(
                 MIN_ING_AMOUNT,
                 message='Нужно указать нормальное количество!'
+            ),
+            MaxValueValidator(
+                MAX_ING_AMOUNT,
+                message='Кол-во ингредиентов не должно превышать 5000!'
             )
         ],
-        null=False,
     )
 
     def __str__(self):
@@ -147,6 +155,12 @@ class TagRecipe(models.Model):
         on_delete=models.CASCADE,
         verbose_name='Рецепт',
     )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['tag', 'recipe'],
+                                    name='unique_tag'),
+        ]
 
     def __str__(self):
         return f'{self.tag} {self.recipe}'
@@ -168,7 +182,6 @@ class Favorite(models.Model):
         verbose_name = 'Избранное'
         verbose_name_plural = 'Избранное'
         default_related_name = 'favorites'
-
         constraints = [
             models.UniqueConstraint(fields=['user', 'recipe'],
                                     name='unique_favorite'),

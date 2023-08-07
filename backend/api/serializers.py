@@ -1,6 +1,5 @@
 import base64
 
-import webcolors
 from django.core.files.base import ContentFile
 from rest_framework import serializers
 from djoser.serializers import UserCreateSerializer, UserSerializer
@@ -15,7 +14,9 @@ from recipes.models import (
     ShoppingCart,
     TagRecipe,
     MIN_COOKING_TIME,
+    MAX_COOKING_TIME,
     MIN_ING_AMOUNT,
+    MAX_ING_AMOUNT,
 )
 
 
@@ -43,18 +44,6 @@ class CustomUserSerializer(UserSerializer):
         return False
 
 
-class Hex2NameColor(serializers.Field):
-    def to_representation(self, value):
-        return value
-
-    def to_internal_value(self, data):
-        try:
-            data = webcolors.hex_to_name(data)
-        except ValueError:
-            raise serializers.ValidationError('Для этого цвета нет имени')
-        return data
-
-
 class Base64ImageField(serializers.ImageField):
     def to_internal_value(self, data):
         if isinstance(data, str) and data.startswith('data:image'):
@@ -65,8 +54,6 @@ class Base64ImageField(serializers.ImageField):
 
 
 class TagSerializer(serializers.ModelSerializer):
-    color = Hex2NameColor()
-
     class Meta:
         fields = ('id', 'name', 'color', 'slug',)
         model = Tag
@@ -100,9 +87,9 @@ class IngredientRecipeCreateSerializer(serializers.ModelSerializer):
         model = IngredientRecipe
 
     def validate_amount(self, value):
-        if value < MIN_ING_AMOUNT:
+        if value < MIN_ING_AMOUNT or value > MAX_ING_AMOUNT:
             raise serializers.ValidationError(
-                'Нужно указать нормальное количество!'
+                'Нужно указать кол-во от 1 до 5000!'
             )
         return value
 
@@ -135,12 +122,10 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     def check_recipe(self, model, obj):
         request = self.context.get('request')
-        if request and request.user.is_authenticated:
-            return model.objects.filter(
-                user=request.user,
-                recipe=obj
-            ).exists()
-        return False
+        return model.objects.filter(
+            user=request.user,
+            recipe=obj
+        ).exists()
 
     def get_is_favorited(self, obj):
         return self.check_recipe(model=Favorite, obj=obj)
@@ -173,14 +158,18 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
         model = Recipe
 
     def validate_cooking_time(self, value):
-        if value < MIN_COOKING_TIME:
+        if value < MIN_COOKING_TIME or value > MAX_COOKING_TIME:
             raise serializers.ValidationError(
-                'Даже шеф-повар не может так быстро готовить!'
+                'Пожалуйста, указывайте адекватное время готовки!'
             )
         return value
 
     def validate_ingredients(self, ingredients):
         unique_ings = []
+        if not ingredients:
+            raise serializers.ValidationError(
+                'Нужно выбрать хотя бы 1 ингредиент!'
+            )
         for ingredient in ingredients:
             ing_id = ingredient.get('id')
             if ing_id in unique_ings:
@@ -189,6 +178,21 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
                 )
             unique_ings.append(ing_id)
         return ingredients
+
+    def validate_tags(self, tags):
+        unique_tags = []
+        if not tags:
+            raise serializers.ValidationError(
+                'Нужно выбрать хотя бы 1 тег!'
+            )
+        for tag in tags:
+            tag_id = tag.get('id')
+            if tag_id in unique_tags:
+                raise serializers.ValidationError(
+                    'Не стоит добавлять один и тот же ингредиент много раз!'
+                )
+            unique_tags.append(tag_id)
+        return tags
 
     def create_tags_recipe(self, tags, recipe):
         for tag in tags:
