@@ -58,4 +58,5 @@ docker compose exec backend cp -r /app/collected_static/. /backend_static/static
 ### Автор:
 
 Михаил Алексенцев
+
 [![Telegram](https://img.shields.io/badge/Telegram-aleksentcev-white?labelColor=blue&style=flat&link=https://t.me/aleksentcev)](https://t.me/aleksentcev)
