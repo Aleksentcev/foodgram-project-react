@@ -171,12 +171,11 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
                 'Нужно выбрать хотя бы 1 ингредиент!'
             )
         for ingredient in ingredients:
-            ing_id = ingredient.get('id')
-            if ing_id in unique_ings:
+            if ingredient in unique_ings:
                 raise serializers.ValidationError(
                     'Не стоит добавлять один и тот же ингредиент много раз!'
                 )
-            unique_ings.append(ing_id)
+            unique_ings.append(ingredient)
         return ingredients
 
     def validate_tags(self, tags):
@@ -186,12 +185,11 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
                 'Нужно выбрать хотя бы 1 тег!'
             )
         for tag in tags:
-            tag_id = tag.get('id')
-            if tag_id in unique_tags:
+            if tag in unique_tags:
                 raise serializers.ValidationError(
                     'Не стоит добавлять один и тот же ингредиент много раз!'
                 )
-            unique_tags.append(tag_id)
+            unique_tags.append(tag)
         return tags
 
     def create_tags_recipe(self, tags, recipe):
