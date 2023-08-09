@@ -29,7 +29,7 @@ services:
       - static:/frontend_static 
   
   nginx:
-    image: nginx:1.19.3
+    image: aleksentcev/foodgram_gateway
     env_file: .env
     ports:
       - "80:80"
