@@ -39,12 +39,10 @@ class RecipeAdmin(admin.ModelAdmin):
         'id',
         'name',
         'author',
+        'tags',
         'count_favorite'
     )
     list_filter = ('author', 'name', 'tags')
-    fields = (
-        'name', 'author', 'tags', 'text', 'cooking_time', 'image'
-    )
     inlines = (IngredientRecipeInLine, TagRecipeInLine)
 
     def count_favorite(self, obj):
