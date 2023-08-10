@@ -3,11 +3,6 @@ from django.contrib.auth.models import AbstractUser
 from django.core.validators import RegexValidator
 from django.core.exceptions import ValidationError
 
-USER = ('user', 'Пользователь')
-ADMIN = ('admin', 'Администратор')
-
-ROLE_CHOICES = [USER, ADMIN]
-
 
 class User(AbstractUser):
     email = models.EmailField(
@@ -33,12 +28,6 @@ class User(AbstractUser):
         'Пароль',
         max_length=150,
     )
-    role = models.CharField(
-        'Права пользователя',
-        choices=ROLE_CHOICES,
-        default=USER[0],
-        max_length=5
-    )
 
     class Meta:
         verbose_name = 'Пользователь'
@@ -47,10 +36,6 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.username
-
-    @property
-    def is_admin(self):
-        return self.role == ADMIN[0] or self.is_superuser
 
 
 class Subscribe(models.Model):
