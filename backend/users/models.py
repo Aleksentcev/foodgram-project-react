@@ -50,7 +50,7 @@ class User(AbstractUser):
 
     @property
     def is_admin(self):
-        return self.role == ADMIN[0] or self.is_superuser or self.is_staff
+        return self.role == ADMIN[0] or self.is_superuser
 
 
 class Subscribe(models.Model):

@@ -42,8 +42,7 @@ class RecipeAdmin(admin.ModelAdmin):
         'tags',
         'text',
         'cooking_time',
-        'image',
-        'count_favorite'
+        'image'
     )
     list_filter = ('author', 'name', 'tags')
     inlines = (IngredientRecipeInLine,)
