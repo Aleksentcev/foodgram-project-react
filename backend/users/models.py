@@ -5,6 +5,13 @@ from django.core.exceptions import ValidationError
 
 
 class User(AbstractUser):
+    USER = 'user'
+    ADMIN = 'admin'
+
+    ROLE_CHOICES = [
+        (USER, 'Пользователь'),
+        (ADMIN, 'Администратор'),
+    ]
     email = models.EmailField(
         'Адрес эл.почты',
         max_length=254,
@@ -28,6 +35,11 @@ class User(AbstractUser):
         'Пароль',
         max_length=150,
     )
+    role = models.CharField(
+        'Права пользователя',
+        choices=ROLE_CHOICES,
+        default=USER,
+    )
 
     class Meta:
         verbose_name = 'Пользователь'
@@ -36,6 +48,10 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.username
+
+    @property
+    def is_admin(self):
+        return self.role == self.ADMIN or self.is_staff
 
 
 class Subscribe(models.Model):
