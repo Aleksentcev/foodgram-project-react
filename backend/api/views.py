@@ -27,13 +27,12 @@ from .serializers import (
     SubscribeSerializer,
 )
 from .filters import IngredientSearchFilter, RecipeFilter
-from .permissions import IsAuthorOrAdminOrReadOnly, IsAdminOrReadOnly
+from .permissions import IsAuthorOrAdminOrReadOnly
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
-    permission_classes = (IsAdminOrReadOnly,)
     pagination_class = None
 
 
@@ -42,7 +41,6 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = IngredientSerializer
     filter_backends = (DjangoFilterBackend,)
     filterset_class = IngredientSearchFilter
-    permission_classes = (IsAdminOrReadOnly,)
     pagination_class = None
 
 

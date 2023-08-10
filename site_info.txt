@@ -1,0 +1,4 @@
+Проект доступен по ссылке: https://foodgramaleksentcev.hopto.org/
+Админка: https://foodgramaleksentcev.hopto.org/admin/
+
+Пользователь alex создан (эл.почта: alex@alex.alex)
