@@ -39,7 +39,7 @@ class User(AbstractUser):
         'Права пользователя',
         choices=ROLE_CHOICES,
         default=USER,
-        max_length=10,
+        max_length=5,
     )
 
     class Meta:
