@@ -13,16 +13,9 @@ class IngredientAdmin(admin.ModelAdmin):
     list_filter = ('name',)
 
 
-class TagRecipeInLine(admin.TabularInline):
-    model = TagRecipe
-    extra = 1
-    min_num = 1
-
-
 class IngredientRecipeInLine(admin.TabularInline):
     model = IngredientRecipe
     extra = 1
-    min_num = 1
 
 
 @admin.register(Tag)
@@ -35,6 +28,11 @@ class TagAdmin(admin.ModelAdmin):
     )
 
 
+class TagRecipeInLine(admin.TabularInline):
+    model = TagRecipe
+    extra = 1
+
+
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
     list_display = (
@@ -44,6 +42,9 @@ class RecipeAdmin(admin.ModelAdmin):
         'count_favorite'
     )
     list_filter = ('author', 'name', 'tags')
+    fields = (
+        'name', 'author', 'tags', 'text', 'cooking_time', 'image'
+    )
     inlines = (IngredientRecipeInLine, TagRecipeInLine)
 
     def count_favorite(self, obj):
