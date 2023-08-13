@@ -24,7 +24,7 @@ from .serializers import (
     RecipeCreateUpdateSerializer,
     RecipeCutSerializer,
     CustomUserSerializer,
-    SubscribeSerializer,
+    SubscribeSerializer
 )
 from .filters import IngredientSearchFilter, RecipeFilter
 from .permissions import IsAuthorOrAdminOrReadOnly
@@ -66,24 +66,23 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return RecipeSerializer
         return RecipeCreateUpdateSerializer
 
-    def add_remove_recipe(self, request, id, user, model, method):
+    def add_remove_recipe(self, request, id, model):
         recipe = get_object_or_404(Recipe, id=id)
-        obj, created = model.objects.get_or_create(
-            user=user,
-            recipe=recipe
-        )
-        if method == 'POST' and not created:
-            raise exceptions.ValidationError(
-                detail='Вы уже cовершили это действие!'
-            )
-        if method == 'POST':
+        obj, created = model.objects.select_related(
+            'user', 'recipe'
+        ).get_or_create(user=request.user, recipe=recipe)
+        if request.method == 'POST' and created:
             serializer = RecipeCutSerializer(
                 recipe,
                 context={'request': request}
             )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        obj.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        if request.method == 'DELETE' and obj:
+            obj.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        raise exceptions.ValidationError(
+            detail='Вы уже совершили это действие!'
+        )
 
     @action(
         detail=True,
@@ -94,11 +93,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
     )
     def favorite(self, request, **kwargs):
         return self.add_remove_recipe(
-            request=request,
-            id=self.kwargs.get('pk'),
-            user=request.user,
-            model=Favorite,
-            method=request.method
+            request,
+            self.kwargs.get('pk'),
+            Favorite
         )
 
     @action(
@@ -110,11 +107,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
     )
     def shopping_cart(self, request, **kwargs):
         return self.add_remove_recipe(
-            request=request,
-            id=self.kwargs.get('pk'),
-            user=request.user,
-            model=ShoppingCart,
-            method=request.method
+            request,
+            self.kwargs.get('pk'),
+            ShoppingCart
         )
 
     @action(

@@ -1,6 +1,16 @@
 from django.contrib import admin
+from django.core.exceptions import ValidationError
+from django.forms.models import BaseInlineFormSet
 
-from .models import Ingredient, Tag, Recipe, IngredientRecipe, TagRecipe
+from .models import (
+    Ingredient,
+    Tag,
+    Recipe,
+    IngredientRecipe,
+    TagRecipe,
+    Favorite,
+    ShoppingCart
+)
 
 
 @admin.register(Ingredient)
@@ -13,9 +23,24 @@ class IngredientAdmin(admin.ModelAdmin):
     list_filter = ('name',)
 
 
+class IngredientRecipeForm(BaseInlineFormSet):
+
+    def clean(self):
+        super(IngredientRecipeForm, self).clean()
+        for form in self.forms:
+            if not hasattr(form, 'cleaned_data'):
+                continue
+            data = form.cleaned_data
+            if data.get('DELETE'):
+                raise ValidationError(
+                    'Нельзя удалять все ингредиенты из рецепта даже в админке!'
+                )
+
+
 class IngredientRecipeInLine(admin.TabularInline):
     model = IngredientRecipe
-    extra = 1
+    min_num = 1
+    formset = IngredientRecipeForm
 
 
 @admin.register(Tag)
@@ -30,7 +55,7 @@ class TagAdmin(admin.ModelAdmin):
 
 class TagRecipeInLine(admin.TabularInline):
     model = TagRecipe
-    extra = 1
+    min_num = 1
 
 
 @admin.register(Recipe)
@@ -39,11 +64,15 @@ class RecipeAdmin(admin.ModelAdmin):
         'id',
         'name',
         'author',
-        'tags',
         'count_favorite'
     )
-    list_filter = ('author', 'name', 'tags')
+    list_filter = ('author', 'tags')
+    search_fields = ('name',)
     inlines = (IngredientRecipeInLine, TagRecipeInLine)
 
     def count_favorite(self, obj):
         return obj.favorites.count()
+
+
+admin.site.register(Favorite)
+admin.site.register(ShoppingCart)

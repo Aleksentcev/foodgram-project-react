@@ -1,4 +1,5 @@
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.exceptions import ValidationError
 from django.db import models
 from colorfield.fields import ColorField
 
@@ -57,6 +58,10 @@ class Tag(models.Model):
     def __str__(self):
         return self.name[:NAME_LIMIT]
 
+    def clean(self):
+        if Tag.objects.filter(color=self.color.upper()).exists():
+            raise ValidationError('Тег с таким цветом уже существует!')
+
 
 class Recipe(models.Model):
     author = models.ForeignKey(
@@ -109,6 +114,12 @@ class Recipe(models.Model):
         verbose_name = 'Рецепт'
         verbose_name_plural = 'Рецепты'
         ordering = ('-pub_date',)
+        constraints = [
+            models.UniqueConstraint(
+                fields=['author', 'name'],
+                name='unique_recipe'
+            ),
+        ]
 
     def __str__(self):
         return self.name[:NAME_LIMIT]
