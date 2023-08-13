@@ -121,13 +121,6 @@ class RecipeSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ('is_favorited', 'is_in_shopping_cart',)
         model = Recipe
-        validators = [
-            validators.UniqueTogetherValidator(
-                queryset=Recipe.objects.all(),
-                fields=['author', 'name'],
-                message='Такой рецепт уже существует!'
-            )
-        ]
 
     def check_recipe(self, model, obj):
         user = self.context.get('request').user
@@ -165,6 +158,13 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
             'cooking_time',
         )
         model = Recipe
+        validators = [
+            validators.UniqueTogetherValidator(
+                queryset=Recipe.objects.all(),
+                fields=['author', 'name'],
+                message='Такой рецепт уже существует!'
+            )
+        ]
 
     def validate_cooking_time(self, value):
         if value < MIN_COOKING_TIME or value > MAX_COOKING_TIME:
