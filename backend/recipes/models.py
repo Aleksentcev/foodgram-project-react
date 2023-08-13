@@ -3,7 +3,6 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from colorfield.fields import ColorField
 
-
 from users.models import User
 
 MIN_COOKING_TIME = 1
