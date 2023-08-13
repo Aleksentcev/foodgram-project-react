@@ -13,7 +13,7 @@ services:
       - foodgram_pg_data:/var/lib/postgresql/data
 
   backend:
-    image: aleksentcev/foodgram_backend
+    image: aleksentcev/foodgram_backend:latest
     env_file: .env
     volumes:
       - static:/backend_static
@@ -22,14 +22,14 @@ services:
       - foodgram_db
 
   frontend:
-    image: aleksentcev/foodgram_frontend
+    image: aleksentcev/foodgram_frontend:latest
     env_file: .env
     command: cp -r /app/build/. /frontend_static/ 
     volumes:
       - static:/frontend_static 
   
   nginx:
-    image: aleksentcev/foodgram_gateway
+    image: aleksentcev/foodgram_gateway:latest
     env_file: .env
     ports:
       - "8000:80"
