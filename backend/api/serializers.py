@@ -161,7 +161,7 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
         validators = [
             validators.UniqueTogetherValidator(
                 queryset=Recipe.objects.all(),
-                fields=['author', 'name'],
+                fields=['name', 'text'],
                 message='Такой рецепт уже существует!'
             )
         ]
@@ -221,8 +221,9 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         ingredients = validated_data.pop('ingredients')
         tags = validated_data.pop('tags')
+        author = self.context.get('request').user
         try:
-            recipe = Recipe.objects.create(**validated_data)
+            recipe = Recipe.objects.create(**validated_data, author=author)
             self.create_ingredients_recipe(ingredients, recipe)
             self.create_tags_recipe(tags, recipe)
             return recipe
