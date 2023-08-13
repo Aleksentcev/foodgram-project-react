@@ -249,12 +249,6 @@ class RecipeCutSerializer(serializers.ModelSerializer):
         model = Recipe
 
 
-class RecipeCutSerializer(serializers.ModelSerializer):
-    class Meta:
-        fields = ('id', 'name', 'image', 'cooking_time',)
-        model = Recipe
-
-
 class CustomUserCreateSerializer(UserCreateSerializer):
     class Meta:
         fields = (
