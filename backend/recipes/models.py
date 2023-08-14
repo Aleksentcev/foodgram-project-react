@@ -58,8 +58,9 @@ class Tag(models.Model):
         return self.name[:NAME_LIMIT]
 
     def clean(self):
-        if Tag.objects.filter(color=self.color.upper()).exists():
-            raise ValidationError('Тег с таким цветом уже существует!')
+        color = self.color.upper()
+        if Tag.objects.filter(color=color).exists():
+            raise ValidationError('Тег такого цвета уже существует!')
 
 
 class Recipe(models.Model):
@@ -197,6 +198,9 @@ class Favorite(models.Model):
                                     name='unique_favorite'),
         ]
 
+    def __str__(self):
+        return f'{self.user} {self.recipe}'
+
 
 class ShoppingCart(models.Model):
     user = models.ForeignKey(
@@ -218,3 +222,6 @@ class ShoppingCart(models.Model):
             models.UniqueConstraint(fields=['user', 'recipe'],
                                     name='unique_shopping_cart'),
         ]
+
+    def __str__(self):
+        return f'{self.user} {self.recipe}'
