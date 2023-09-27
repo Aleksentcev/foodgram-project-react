@@ -59,4 +59,4 @@ docker compose exec backend cp -r /app/collected_static/. /backend_static/static
 
 Михаил Алексенцев
 
-[![Telegram](https://img.shields.io/badge/Telegram-aleksentcev-white?labelColor=blue&style=flat&link=https://t.me/aleksentcev)](https://t.me/aleksentcev)
+[![Telegram](https://img.shields.io/badge/aleksentcev-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white&link=https://t.me/aleksentcev)](https://t.me/aleksentcev)
