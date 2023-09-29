@@ -21,14 +21,13 @@ cd foodgram-project-react/infra
 Создать директории infra файл .env и заполнить его своими данными:
 
 ```
-POSTGRES_DB=write_anything
-POSTGRES_USER=write_username
-POSTGRES_PASSWORD=write_password
-DB_NAME=write_anything
-DB_HOST=kitty_db
-DB_PORT=1234
-SECRET_KEY=your_secret_code
-ALLOWED_HOSTS=localhost you_can_add_your_domain_here
+POSTGRES_DB=postgres
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=<your_password>
+DB_HOST=foodgram_db
+DB_PORT=5432
+SECRET_KEY=<your_secret_key>
+ALLOWED_HOSTS=localhost you_can_add_your_host_here
 ```
 
 Запустить оркестр контейнеров:
