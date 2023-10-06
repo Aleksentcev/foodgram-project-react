@@ -42,7 +42,7 @@ docker compose up
 docker compose exec backend python manage.py migrate 
 ```
 
-Собрать и скопировать статику Django
+Собрать и скопировать статику Django:
 
 ```
 docker compose exec backend python manage.py collectstatic
@@ -51,7 +51,7 @@ docker compose exec backend python manage.py collectstatic
 docker compose exec backend cp -r /app/collected_static/. /backend_static/static/ 
 ```
 
-Проект будет или не будет доступен по адресу: http://localhost/
+Проект будет доступен по адресу: http://localhost/
 Если ничего не заработало - идите пить чай :)
 
 ### Автор:
